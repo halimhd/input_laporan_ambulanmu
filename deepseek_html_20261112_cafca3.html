@@ -101,7 +101,7 @@ tr:hover td{background:#fff9f3}
 .page.active{display:block}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#2e7d32;color:#fff;
   padding:14px 24px;border-radius:12px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:999;
-  animation:slideUp .3s ease}
+  animation:slideUp .3s ease;max-width:90vw}
 @keyframes slideUp{from{opacity:0;transform:translate(-50%,20px)}to{opacity:1;transform:translate(-50%,0)}}
 .crew-badge{background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:999px;font-size:.75rem;font-weight:600}
 </style>
@@ -111,8 +111,7 @@ tr:hover td{background:#fff9f3}
 <header class="hero">
   <div class="logo">🚑</div>
   <h1>AmbulanMu <span>Godean</span></h1>
-  <p class="tagline">Tetap semangat melayani umat,
-Memberi untuk Negeri</p>
+  <p class="tagline">Tetap semangat melayani umat, Memberi untuk Negeri</p>
   <div class="leaf leaf-1">🌿</div>
   <div class="leaf leaf-2">🍃</div>
   <div class="leaf leaf-3">🌿</div>
@@ -260,8 +259,7 @@ Memberi untuk Negeri</p>
 
 </main>
 
-<!-- ============ SCRIPT DIMULAI DI BAGIAN 2 ============ -->
-  <script>
+<script>
 /* ============================================================
    KONFIGURASI
 ============================================================ */
@@ -299,10 +297,17 @@ function seedDemo(){
 }
 function loadLocal(){
   const raw = localStorage.getItem(STORAGE_KEY);
-  if(!raw){ const s = seedDemo(); localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); return s; }
+  if(!raw){ const s = seedDemo(); try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }catch(e){} return s; }
   try { return JSON.parse(raw); } catch { return []; }
 }
-function saveLocal(arr){ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
+function saveLocal(arr){
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  } catch(e){
+    toast('⚠️ Storage browser penuh! Buka menu Master → Hapus data lama.', false);
+    throw e;
+  }
+}
 
 function listLaporan(){ return loadLocal().sort((a,b)=> (b.created_at||'').localeCompare(a.created_at||'')); }
 function getLaporan(id){ return loadLocal().find(x=>x.id===id); }
@@ -322,7 +327,8 @@ function updateLaporan(id, patch){
    UTIL
 ============================================================ */
 function fmtRp(n){ return (+n>0) ? 'Rp ' + Number(n).toLocaleString('id-ID') : '-'; }
-function toast(msg, ok=true){
+function toast(msg, ok){
+  if(ok===undefined) ok = true;
   const el = document.createElement('div');
   el.className = 'toast';
   el.style.background = ok ? '#2e7d32' : '#c62828';
@@ -340,7 +346,7 @@ function getArmadaList(){
 }
 
 /* ============================================================
-   ROUTER SEDERHANA
+   ROUTER
 ============================================================ */
 function navigate(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -354,7 +360,6 @@ function navigate(page){
   if(page==='admin') renderAdmin();
   if(page==='master') renderMaster();
   if(page==='input') renderInput();
-  if(page==='detail'){} // handled separately
 }
 
 document.querySelectorAll('#nav a').forEach(a=>{
@@ -400,24 +405,24 @@ function renderBeranda(){
 ============================================================ */
 function renderInput(){
   const form = document.getElementById('form-laporan');
-  form.crew.innerHTML = '<option value="">-- Pilih --</option>' +
-    getCrewList().map(c=>`<option>${c}</option>`).join('');
-  form.armada.innerHTML = getArmadaList().map(a=>`<option>${a}</option>`).join('');
-  form.keperluan.innerHTML = '<option value="">-- Pilih --</option>' +
-    KEPERLUAN_LIST.map(k=>`<option>${k}</option>`).join('');
+  if(!form.crew.options.length){
+    form.crew.innerHTML = '<option value="">-- Pilih --</option>' +
+      getCrewList().map(c=>`<option>${c}</option>`).join('');
+    form.armada.innerHTML = getArmadaList().map(a=>`<option>${a}</option>`).join('');
+    form.keperluan.innerHTML = '<option value="">-- Pilih --</option>' +
+      KEPERLUAN_LIST.map(k=>`<option>${k}</option>`).join('');
+  }
   if(!form.tanggal.value){
     form.tanggal.value = new Date().toISOString().slice(0,10);
     form.hari.value = HARI[new Date().getDay()];
   }
 }
 
-// auto isi hari
 document.getElementById('form-laporan').tanggal.addEventListener('change', e=>{
   const d = new Date(e.target.value);
   document.getElementById('form-laporan').hari.value = HARI[d.getDay()] || '';
 });
 
-// preview foto
 document.querySelector('[name=foto]').addEventListener('change', e=>{
   const prev = document.getElementById('foto-preview'); prev.innerHTML='';
   [...e.target.files].forEach(f=>{
@@ -426,7 +431,6 @@ document.querySelector('[name=foto]').addEventListener('change', e=>{
   });
 });
 
-// duplikat laporan terakhir
 document.getElementById('btn-duplikat').addEventListener('click', ()=>{
   const data = listLaporan();
   if(!data.length){ toast('Belum ada laporan untuk diduplikat.', false); return; }
@@ -437,7 +441,6 @@ document.getElementById('btn-duplikat').addEventListener('click', ()=>{
   toast('✅ Terisi dari laporan terakhir. Ubah tanggal & nama pasien.');
 });
 
-// tombol maps
 document.querySelectorAll('.btn-map').forEach(b=>{
   b.addEventListener('click', ()=>{
     const name = b.dataset.maps;
@@ -449,7 +452,6 @@ document.querySelectorAll('.btn-map').forEach(b=>{
   });
 });
 
-// submit form
 document.getElementById('form-laporan').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const form = e.target;
@@ -459,7 +461,6 @@ document.getElementById('form-laporan').addEventListener('submit', async (e)=>{
   payload.kas_keluar = +payload.kas_keluar || 0;
   payload.jarak_km = +payload.jarak_km || 0;
 
-  // baca foto jadi base64 (max ~150KB per foto agar tidak terlalu besar)
   const fotoFiles = form.foto.files;
   const urls = [];
   for(const f of fotoFiles){
@@ -471,13 +472,19 @@ document.getElementById('form-laporan').addEventListener('submit', async (e)=>{
   }
   payload.foto_urls = urls;
 
-  insertLaporan(payload);
-  toast('✅ Laporan tersimpan!');
-  form.reset();
-  form.tanggal.value = new Date().toISOString().slice(0,10);
-  form.hari.value = HARI[new Date().getDay()];
-  document.getElementById('foto-preview').innerHTML = '';
-  navigate('beranda');
+  try{
+    insertLaporan(payload);
+    toast('✅ Laporan tersimpan!');
+    form.reset();
+    setTimeout(()=>{
+      form.tanggal.value = new Date().toISOString().slice(0,10);
+      form.hari.value = HARI[new Date().getDay()];
+    }, 0);
+    document.getElementById('foto-preview').innerHTML = '';
+    navigate('beranda');
+  }catch(err){
+    // toast sudah dipanggil di saveLocal
+  }
 });
 
 /* ============================================================
@@ -508,278 +515,4 @@ function openDetail(id){
       <div class="route-point drop">🔴 Tujuan: <b>${r.titik_tujuan||'-'}</b></div>
     </div>
     <a class="btn btn-map" target="_blank" style="margin-top:8px"
-      href="https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(r.titik_jemput||'')}&destination=${encodeURIComponent(r.titik_tujuan||'')}">
-      🗺️ Buka Rute di Google Maps
-    </a>
-    <h3>📷 Dokumentasi Foto</h3>
-    ${(r.foto_urls&&r.foto_urls.length)
-      ? `<div class="foto-preview">${r.foto_urls.map(u=>`<a href="${u}" target="_blank"><img src="${u}"></a>`).join('')}</div>`
-      : '<p style="color:#999">Tidak ada foto.</p>'}
-    <h3>📝 Note</h3>
-    <p>${r.note || '-'}</p>
-    <h3>📋 Salin ke WhatsApp</h3>
-    <button class="btn btn-wa" onclick="copySingleWA('${r.id}')">📱 Salin Laporan Ini ke WhatsApp</button>
-  `;
-  navigate('detail');
-}
-window.openDetail = openDetail;
-
-window.copySingleWA = function(id){
-  const r = getLaporan(id);
-  const text = `
-*Laporan Layanan AmbulanMu Godean*
-*Hari* : *${r.hari||'-'}*
-*Tanggal* : *${r.tanggal||'-'}*
-*Waktu* : *${r.waktu||'-'}*
-*Keperluan* : *${r.keperluan||'-'}*
-*Nama* : *${r.nama||'-'}*
-*Alamat* : *${r.alamat||'-'}*
-*Titik jemput* : *${r.titik_jemput||'-'}*
-*Titik Tujuan* : *${r.titik_tujuan||'-'}*
-*Armada* : *${r.armada||'-'}*
-*Crew* : *${r.crew||'-'}*
-*Kas Masuk* : *${fmtRp(r.kas_masuk)}*
-*Kas keluar* : *${fmtRp(r.kas_keluar)}*
-*Ket Kas Keluar* : *${r.ket_kas_keluar||'-'}*
-*Jarak* : *${r.jarak_km||0} KM*
-*Note* : *${r.note||'-'}*
-
-_Tetap semangat melayani umat,_
-_Memberi untuk Negeri_`.trim();
-  navigator.clipboard.writeText(text).then(()=>{
-    toast('✅ Tersalin! Tempel di WhatsApp.');
-    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
-  });
-};
-
-document.getElementById('btn-back').addEventListener('click', ()=>navigate('beranda'));
-
-/* ============================================================
-   ADMIN
-============================================================ */
-let adminData = [];
-
-function renderAdmin(){
-  const dari = document.getElementById('filter-dari').value;
-  const sampai = document.getElementById('filter-sampai').value;
-  let data = listLaporan();
-  if(dari) data = data.filter(x=>x.tanggal>=dari);
-  if(sampai) data = data.filter(x=>x.tanggal<=sampai);
-  adminData = data;
-
-  const km = data.reduce((s,x)=>s+(+x.jarak_km||0),0);
-  const masuk = data.reduce((s,x)=>s+(+x.kas_masuk||0),0);
-  const keluar = data.reduce((s,x)=>s+(+x.kas_keluar||0),0);
-  document.getElementById('stats-admin').innerHTML = `
-    <div class="stat"><div class="num">${data.length}</div><div class="lbl">Total Laporan</div></div>
-    <div class="stat green"><div class="num">${km.toFixed(1)} KM</div><div class="lbl">Total Jarak</div></div>
-    <div class="stat"><div class="num">${fmtRp(masuk)}</div><div class="lbl">Kas Masuk</div></div>
-    <div class="stat green"><div class="num">${fmtRp(keluar)}</div><div class="lbl">Kas Keluar</div></div>
-  `;
-
-  const tbody = document.querySelector('#tabel-rekap tbody');
-  if(!data.length){
-    tbody.innerHTML = '<tr><td colspan="16" style="text-align:center;padding:20px;color:#999">Belum ada data pada rentang ini.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = data.map(r=>{
-    const canEdit = (Date.now() - new Date(r.created_at||r.tanggal).getTime()) < 5*60*1000;
-    return `
-    <tr>
-      <td>${r.tanggal||'-'}</td><td>${r.hari||''}</td><td>${r.waktu||''}</td>
-      <td>${r.keperluan||''}</td><td>${r.nama||''}</td><td>${r.alamat||''}</td>
-      <td>${r.titik_jemput||''}</td><td>${r.titik_tujuan||''}</td>
-      <td>${r.armada||''}</td><td>${r.crew||''}</td>
-      <td>${fmtRp(r.kas_masuk)}</td>
-      <td>${fmtRp(r.kas_keluar)}</td>
-      <td>${r.ket_kas_keluar||'-'}</td>
-      <td>${r.jarak_km||0}</td>
-      <td>${(r.foto_urls||[]).length ? `<a href="${r.foto_urls[0]}" target="_blank">🖼️${r.foto_urls.length}</a>` : '-'}</td>
-      <td>${canEdit ? `<button class="btn btn-ghost btn-sm" onclick="editRow('${r.id}')">✏️</button>` : '🔒'}</td>
-    </tr>`;
-  }).join('');
-}
-
-window.editRow = function(id){
-  const r = getLaporan(id);
-  if(!r) return;
-  const nama = prompt('Nama pasien:', r.nama); if(nama===null) return;
-  const keperluan = prompt('Keperluan:', r.keperluan); if(keperluan===null) return;
-  const kas_masuk = prompt('Kas masuk (angka):', r.kas_masuk); if(kas_masuk===null) return;
-  const kas_keluar = prompt('Kas keluar (angka):', r.kas_keluar); if(kas_keluar===null) return;
-  updateLaporan(id, {nama, keperluan, kas_masuk:+kas_masuk||0, kas_keluar:+kas_keluar||0});
-  toast('✅ Diperbarui.');
-  renderAdmin();
-};
-
-document.getElementById('btn-filter').addEventListener('click', renderAdmin);
-
-document.getElementById('btn-excel').addEventListener('click', ()=>{
-  if(!adminData.length){ toast('Tidak ada data.', false); return; }
-  const rows = adminData.map(r=>({
-    Tanggal:r.tanggal, Hari:r.hari, Waktu:r.waktu, Keperluan:r.keperluan,
-    Nama:r.nama, Alamat:r.alamat, 'Titik Jemput':r.titik_jemput, 'Titik Tujuan':r.titik_tujuan,
-    Armada:r.armada, Crew:r.crew, 'Kas Masuk (Rp)':r.kas_masuk, 'Kas Keluar (Rp)':r.kas_keluar,
-    'Ket Kas Keluar':r.ket_kas_keluar, 'Jarak (KM)':r.jarak_km, Note:r.note
-  }));
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Rekap');
-  XLSX.writeFile(wb, `rekap-ambulanmu-${new Date().toISOString().slice(0,10)}.xlsx`);
-  toast('✅ File Excel diunduh.');
-});
-
-document.getElementById('btn-wa').addEventListener('click', ()=>{
-  if(!adminData.length){ toast('Tidak ada data.', false); return; }
-  const text = adminData.map(r=>`
-*Laporan Layanan AmbulanMu Godean*
-*Hari* : *${r.hari||'-'}*
-*Tanggal* : *${r.tanggal||'-'}*
-*Waktu* : *${r.waktu||'-'}*
-*Keperluan* : *${r.keperluan||'-'}*
-*Nama* : *${r.nama||'-'}*
-*Alamat* : *${r.alamat||'-'}*
-*Titik jemput* : *${r.titik_jemput||'-'}*
-*Titik Tujuan* : *${r.titik_tujuan||'-'}*
-*Armada* : *${r.armada||'-'}*
-*Crew* : *${r.crew||'-'}*
-*Kas Masuk* : *${fmtRp(r.kas_masuk)}*
-*Kas keluar* : *${fmtRp(r.kas_keluar)}*
-*Ket Kas Keluar* : *${r.ket_kas_keluar||'-'}*
-*Jarak* : *${r.jarak_km||0} KM*
-*Note* : *${r.note||'-'}*
-
-_Tetap semangat melayani umat,_
-_Memberi untuk Negeri_`).join('\n\n---\n');
-  navigator.clipboard.writeText(text).then(()=>toast('✅ Tersalin ke clipboard!'));
-});
-
-document.getElementById('btn-sheets').addEventListener('click', ()=>{
-  if(!adminData.length){ toast('Tidak ada data.', false); return; }
-  const header = ['Tanggal','Hari','Waktu','Keperluan','Nama','Alamat','Titik Jemput','Titik Tujuan','Armada','Crew','Kas Masuk','Kas Keluar','Ket Kas','KM','Note'];
-  const rows = adminData.map(r=>[r.tanggal,r.hari,r.waktu,r.keperluan,r.nama,r.alamat,r.titik_jemput,r.titik_tujuan,r.armada,r.crew,r.kas_masuk,r.kas_keluar,r.ket_kas_keluar,r.jarak_km,r.note]);
-  const tsv = [header, ...rows].map(r=>r.map(x=>String(x??'').replace(/\t/g,' ')).join('\t')).join('\n');
-  navigator.clipboard.writeText(tsv).then(()=>{
-    toast('✅ Data TSV tersalin. Buka Google Sheets → Ctrl+V di A1.');
-    window.open('https://sheets.new', '_blank');
-  });
-});
-
-// init date filter
-(function initFilterDates(){
-  const t = new Date();
-  const first = new Date(t.getFullYear(), t.getMonth(), 1);
-  document.getElementById('filter-dari').value = first.toISOString().slice(0,10);
-  document.getElementById('filter-sampai').value = t.toISOString().slice(0,10);
-})();
-
-/* ============================================================
-   MASTER
-============================================================ */
-function renderMaster(){
-  const theme = localStorage.getItem(STORAGE_THEME);
-  if(theme) applyTheme(theme);
-  document.getElementById('crew-list').value =
-    (localStorage.getItem(STORAGE_CREW) || CREW_LIST.join('\n'));
-  document.getElementById('armada-list').value =
-    (localStorage.getItem(STORAGE_ARM) || ARMADA_LIST.join('\n'));
-
-  // restore menu order
-  const menuOrder = JSON.parse(localStorage.getItem(STORAGE_MENU) || 'null');
-  if(menuOrder){
-    const ul = document.getElementById('menu-order');
-    const map = {};
-    [...ul.children].forEach(li=>{ map[li.dataset.key] = li; });
-    ul.innerHTML = '';
-    menuOrder.forEach(k=>{ if(map[k]) ul.appendChild(map[k]); });
-    Object.values(map).forEach(li=>{ if(!menuOrder.includes(li.dataset.key)) ul.appendChild(li); });
-  }
-}
-
-function applyTheme(t){
-  document.documentElement.dataset.theme = t;
-  // override var via inline
-  const root = document.documentElement.style;
-  if(t==='green-white'){ root.setProperty('--orange','#4caf50'); root.setProperty('--orange-dark','#2e7d32'); }
-  else if(t==='orange-white'){ root.setProperty('--orange','#ff8a3d'); root.setProperty('--orange-dark','#e86b1f'); root.setProperty('--green','#ff8a3d'); root.setProperty('--green-dark','#e86b1f'); }
-  else { root.setProperty('--orange','#ff8a3d'); root.setProperty('--orange-dark','#e86b1f'); root.setProperty('--green','#4caf50'); root.setProperty('--green-dark','#2e7d32'); }
-}
-
-document.querySelectorAll('.theme-btn').forEach(b=>{
-  b.addEventListener('click', ()=>{
-    applyTheme(b.dataset.theme);
-    localStorage.setItem(STORAGE_THEME, b.dataset.theme);
-    toast('✅ Tema disimpan.');
-  });
-});
-
-// drag menu
-(function setupDragMenu(){
-  const ul = document.getElementById('menu-order');
-  let drag = null;
-  ul.querySelectorAll('li').forEach(li=>{
-    li.addEventListener('dragstart', ()=>{ drag = li; li.classList.add('dragging'); });
-    li.addEventListener('dragend', ()=>{ li.classList.remove('dragging'); drag=null; saveMenuOrder(); });
-    li.addEventListener('dragover', e=>e.preventDefault());
-    li.addEventListener('drop', e=>{
-      e.preventDefault();
-      if(drag && drag!==li) ul.insertBefore(drag, li);
-    });
-  });
-})();
-function saveMenuOrder(){
-  const order = [...document.querySelectorAll('#menu-order li')].map(li=>li.dataset.key);
-  localStorage.setItem(STORAGE_MENU, JSON.stringify(order));
-}
-
-document.getElementById('btn-save-crew').addEventListener('click', ()=>{
-  localStorage.setItem(STORAGE_CREW, document.getElementById('crew-list').value);
-  toast('✅ Crew disimpan.');
-});
-document.getElementById('btn-save-armada').addEventListener('click', ()=>{
-  localStorage.setItem(STORAGE_ARM, document.getElementById('armada-list').value);
-  toast('✅ Armada disimpan.');
-});
-
-document.getElementById('btn-clean').addEventListener('click', ()=>{
-  if(!confirm('Hapus laporan lebih dari 6 bulan? Tidak bisa dibatalkan.')) return;
-  const all = loadLocal();
-  const cutoff = Date.now() - 180*24*60*60*1000;
-  const keep = all.filter(x=>new Date(x.created_at||x.tanggal).getTime() > cutoff);
-  saveLocal(keep);
-  toast(`✅ Dihapus ${all.length - keep.length}, tersisa ${keep.length}.`);
-  renderAdmin();
-});
-
-/* ============================================================
-   INIT
-============================================================ */
-const savedTheme = localStorage.getItem(STORAGE_THEME);
-if(savedTheme) applyTheme(savedTheme);
-
-// restore menu order visual di nav (opsional)
-(function restoreNavOrder(){
-  const order = JSON.parse(localStorage.getItem(STORAGE_MENU) || 'null');
-  if(!order) return;
-  const nav = document.getElementById('nav');
-  const map = {};
-  [...nav.children].forEach(a=>{ map[a.dataset.page] = a; });
-  nav.innerHTML = '';
-  order.forEach(k=>{ if(map[k]) nav.appendChild(map[k]); });
-  Object.values(map).forEach(a=>{ if(!order.includes(a.dataset.page)) nav.appendChild(a); });
-})();
-
-// inisialisasi halaman default
-(function initFromHash(){
-  const hash = (location.hash || '#beranda').slice(1);
-  if(['beranda','input','admin','master'].includes(hash)) navigate(hash);
-  else navigate('beranda');
-})();
-
-// refresh beranda tiap 5 detik (kalau user buka 2 tab)
-setInterval(()=>{
-  if(document.getElementById('page-beranda').classList.contains('active')) renderBeranda();
-}, 5000);
-</script>
-</body>
-</html>
+      href="https://www.google.com/maps/dir/?
