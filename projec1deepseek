@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AmbulanMu Godean — Rekap Layanan</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --orange:#ff8a3d;--orange-dark:#e86b1f;
+  --green:#4caf50;--green-dark:#2e7d32;
+  --bg:#fff9f3;--card:#ffffff;--text:#2b2b2b;--muted:#7a7a7a;
+  --shadow:0 6px 18px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Poppins',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+  background-image:radial-gradient(circle at 10% 10%,rgba(76,175,80,.08),transparent 40%),
+    radial-gradient(circle at 90% 90%,rgba(255,138,61,.08),transparent 40%);}
+.hero{position:relative;padding:48px 24px 44px;text-align:center;
+  background:linear-gradient(135deg,var(--orange) 0%,#ffb347 40%,var(--green) 100%);
+  color:#fff;overflow:hidden;border-radius:0 0 32px 32px;}
+.hero h1{font-size:2.2rem;font-weight:700}
+.hero h1 span{color:#fffde7}
+.hero .logo{font-size:3rem;margin-bottom:8px;animation:float 3s ease-in-out infinite}
+.tagline{opacity:.95;margin-top:6px;font-style:italic}
+.leaf{position:absolute;font-size:2.4rem;opacity:.6;animation:float 4s ease-in-out infinite}
+.leaf-1{top:10px;left:20px}.leaf-2{bottom:10px;right:30px;animation-delay:1s}.leaf-3{top:40%;right:15%;animation-delay:2s}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.main-nav{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;background:#fff;padding:12px;
+  border-radius:999px;margin:-24px auto 24px;width:fit-content;box-shadow:var(--shadow);position:relative;z-index:2;}
+.main-nav a,.main-nav button{padding:10px 18px;border-radius:999px;text-decoration:none;color:var(--text);
+  font-weight:600;font-size:.92rem;transition:.2s;border:none;background:none;cursor:pointer;font-family:inherit;}
+.main-nav a:hover,.main-nav button:hover{background:#fff3e6;color:var(--orange-dark)}
+.main-nav a.active,.main-nav button.active{background:linear-gradient(135deg,var(--orange),var(--green));color:#fff}
+.container{max-width:1100px;margin:0 auto;padding:0 16px 48px}
+.card{background:var(--card);border-radius:20px;padding:24px;box-shadow:var(--shadow);margin-bottom:24px}
+.card h2{margin-bottom:16px;color:var(--green-dark)}
+.card h3{margin:20px 0 10px;color:var(--orange-dark)}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
+.stat{background:linear-gradient(135deg,#fff,#fff4e6);border-radius:16px;padding:16px;text-align:center;
+  border-left:6px solid var(--orange);box-shadow:var(--shadow)}
+.stat.green{border-left-color:var(--green)}
+.stat .num{font-size:1.6rem;font-weight:700;color:var(--green-dark)}
+.stat .lbl{font-size:.8rem;color:var(--muted);margin-top:4px}
+.btn{border:none;border-radius:12px;padding:10px 16px;font-weight:600;cursor:pointer;font-family:inherit;
+  font-size:.9rem;transition:.2s}
+.btn-primary{background:linear-gradient(135deg,var(--orange),var(--green));color:#fff}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 16px rgba(0,0,0,.15)}
+.btn-excel{background:#1d6f42;color:#fff}
+.btn-wa{background:#25d366;color:#fff}
+.btn-ghost{background:#fff;border:2px solid var(--orange);color:var(--orange-dark)}
+.btn-danger{background:#e53935;color:#fff}
+.btn-map{background:#e3f2fd;color:#1565c0;margin-top:6px;display:inline-block;text-decoration:none;padding:8px 12px;
+  border-radius:10px;font-size:.85rem;font-weight:600;border:none;cursor:pointer}
+.btn-sm{padding:6px 10px;font-size:.8rem}
+form label,.filter-row label{display:block;margin-bottom:14px;font-weight:600;color:#444;font-size:.92rem}
+input,select,textarea{width:100%;padding:12px 14px;margin-top:6px;border:2px solid #ffe0c2;border-radius:12px;
+  font-family:inherit;font-size:.95rem;background:#fffdf9;transition:.2s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 4px rgba(255,138,61,.15)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:600px){.form-row{grid-template-columns:1fr}}
+.table-wrap{overflow-x:auto;margin-top:16px;border-radius:16px}
+table{width:100%;border-collapse:collapse;font-size:.85rem;background:#fff}
+th{background:linear-gradient(135deg,var(--orange),var(--green));color:#fff;padding:12px;text-align:left;white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid #ffe0c2}
+tr:hover td{background:#fff9f3}
+.laporan-list{display:grid;gap:12px}
+.laporan-item{display:block;text-decoration:none;color:inherit;background:#fffdf9;border-radius:14px;
+  padding:14px 16px;border-left:6px solid var(--green);box-shadow:0 2px 8px rgba(0,0,0,.04);
+  transition:.2s;cursor:pointer}
+.laporan-item:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.08)}
+.laporan-item .head{display:flex;justify-content:space-between;font-weight:700;color:var(--green-dark);gap:10px}
+.laporan-item .meta{font-size:.85rem;color:var(--muted);margin-top:4px}
+.armada-badge{background:var(--orange);color:#fff;padding:2px 10px;border-radius:999px;font-size:.75rem}
+.motivation{text-align:center;padding:24px;margin-top:24px;background:linear-gradient(135deg,#fff4e6,#e8f5e9);
+  border-radius:20px;color:var(--green-dark)}
+.motivation p{margin:4px 0}
+.live-badge{background:#e8f5e9;color:#2e7d32;padding:4px 10px;border-radius:999px;font-size:.75rem;font-weight:700}
+.loading{color:var(--muted);text-align:center;padding:20px}
+.foto-preview{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 16px}
+.foto-preview img{width:100px;height:100px;object-fit:cover;border-radius:10px;border:2px solid var(--green)}
+.theme-grid{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.theme-btn{padding:14px 20px;border-radius:12px;border:none;color:#000;font-weight:700;cursor:pointer;font-family:inherit}
+.menu-order{list-style:none;display:grid;gap:8px}
+.menu-order li{background:#fffdf9;border:2px dashed var(--orange);padding:12px;border-radius:12px;
+  cursor:grab;font-weight:600}
+.menu-order li.dragging{opacity:.4}
+.hint{font-size:.85rem;color:var(--muted);margin-bottom:8px}
+.action-row{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
+.filter-row{display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin-bottom:16px}
+.filter-row label{margin:0}
+.route{background:#f5fbff;border-radius:14px;padding:16px;margin:10px 0}
+.route-point{padding:10px;background:#fff;border-radius:10px;margin:6px 0;border-left:4px solid #2196f3}
+.route-point.drop{border-left-color:#f44336}
+.route-line{text-align:center;color:#999;font-weight:700}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}
+.detail-grid>div{background:#fffdf9;padding:12px;border-radius:10px;border-left:3px solid var(--orange);font-size:.9rem}
+.page{display:none}
+.page.active{display:block}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#2e7d32;color:#fff;
+  padding:14px 24px;border-radius:12px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:999;
+  animation:slideUp .3s ease;max-width:90vw}
+@keyframes slideUp{from{opacity:0;transform:translate(-50%,20px)}to{opacity:1;transform:translate(-50%,0)}}
+.crew-badge{background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:999px;font-size:.75rem;font-weight:600}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="logo">🚑</div>
+  <h1>AmbulanMu <span>Godean</span></h1>
+  <p class="tagline">Tetap semangat melayani umat, Memberi untuk Negeri</p>
+  <div class="leaf leaf-1">🌿</div>
+  <div class="leaf leaf-2">🍃</div>
+  <div class="leaf leaf-3">🌿</div>
+</header>
+
+<nav class="main-nav" id="nav">
+  <a href="#beranda" data-page="beranda" class="active">🏠 Beranda</a>
+  <a href="#input" data-page="input">➕ Isi Laporan</a>
+  <a href="#admin" data-page="admin">📊 Admin</a>
+  <a href="#master" data-page="master">⚙️ Master</a>
+</nav>
+
+<main class="container">
+
+<!-- ============ HALAMAN BERANDA ============ -->
+<div class="page active" id="page-beranda">
+  <div class="stats-grid" id="stats"></div>
+  <div class="card">
+    <div class="card-header">
+      <h2>📋 Laporan Terbaru</h2>
+      <span class="live-badge">● LIVE</span>
+    </div>
+    <div id="laporan-list" class="laporan-list">
+      <p class="loading">Memuat data...</p>
+    </div>
+  </div>
+  <div class="motivation">
+    <p>✨ <em>Tetap semangat melayani umat</em></p>
+    <p><strong>Memberi untuk Negeri</strong> 🇮🇩</p>
+  </div>
+</div>
+
+<!-- ============ HALAMAN INPUT ============ -->
+<div class="page" id="page-input">
+  <div class="card">
+    <h2>📝 Form Laporan Layanan</h2>
+    <button id="btn-duplikat" class="btn btn-ghost" style="margin-bottom:16px">📋 Duplikat Laporan Kemarin</button>
+    <form id="form-laporan">
+      <div class="form-row">
+        <label>Hari <input type="text" name="hari" readonly></label>
+        <label>Tanggal <input type="date" name="tanggal" required></label>
+      </div>
+      <label>Waktu <input type="time" name="waktu" required></label>
+      <label>Keperluan
+        <select name="keperluan" required></select>
+      </label>
+      <label>Nama Pasien <input type="text" name="nama" required placeholder="Nama lengkap pasien"></label>
+      <label>Alamat <input type="text" name="alamat" required placeholder="Alamat lengkap"></label>
+      <label>Titik Jemput
+        <input type="text" name="titik_jemput" placeholder="Ketik atau pilih di peta" required>
+        <button type="button" class="btn btn-map" data-maps="titik_jemput">🗺️ Pilih di Peta</button>
+      </label>
+      <label>Titik Tujuan
+        <input type="text" name="titik_tujuan" placeholder="Ketik atau pilih di peta" required>
+        <button type="button" class="btn btn-map" data-maps="titik_tujuan">🗺️ Pilih di Peta / Rumah Sakit</button>
+      </label>
+      <div class="form-row">
+        <label>Armada <select name="armada" required></select></label>
+        <label>Crew (Driver) <select name="crew" required></select></label>
+      </div>
+      <label>Kas Masuk (Rp) <input type="number" name="kas_masuk" placeholder="contoh: 50000" value="0" min="0"></label>
+      <label>Kas Keluar (Rp) <input type="number" name="kas_keluar" placeholder="contoh: 20000" value="0" min="0"></label>
+      <label>Keterangan Kas Keluar
+        <textarea name="ket_kas_keluar" rows="2" placeholder="contoh: Bensin, tol, parkir..."></textarea>
+      </label>
+      <label>Jarak Tempuh (KM) <input type="number" name="jarak_km" placeholder="contoh: 12.5" step="0.1" value="0" min="0"></label>
+      <label>Note <textarea name="note" rows="3" placeholder="Catatan tambahan..."></textarea></label>
+      <label>📷 Dokumentasi Foto (bisa lebih dari satu)
+        <input type="file" name="foto" accept="image/*" multiple>
+      </label>
+      <div id="foto-preview" class="foto-preview"></div>
+      <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;font-size:1rem">💾 Simpan Laporan</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============ HALAMAN ADMIN ============ -->
+<div class="page" id="page-admin">
+  <div class="card">
+    <h2>📊 Rekap & Olah Data</h2>
+    <div class="filter-row">
+      <label>Dari <input type="date" id="filter-dari"></label>
+      <label>Sampai <input type="date" id="filter-sampai"></label>
+      <button class="btn btn-primary" id="btn-filter">🔍 Filter</button>
+    </div>
+    <div class="stats-grid" id="stats-admin"></div>
+    <div class="action-row">
+      <button class="btn btn-excel" id="btn-excel">📥 Export Excel (.xlsx)</button>
+      <button class="btn btn-wa" id="btn-wa">📱 Salin Format WhatsApp</button>
+      <button class="btn btn-ghost" id="btn-sheets">📗 Google Sheets</button>
+    </div>
+    <div class="table-wrap">
+      <table id="tabel-rekap">
+        <thead>
+          <tr>
+            <th>Tanggal</th><th>Hari</th><th>Waktu</th><th>Keperluan</th>
+            <th>Nama</th><th>Alamat</th><th>Jemput</th><th>Tujuan</th>
+            <th>Armada</th><th>Crew</th><th>Kas Masuk</th><th>Kas Keluar</th>
+            <th>Ket Kas</th><th>KM</th><th>Foto</th><th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============ HALAMAN MASTER ============ -->
+<div class="page" id="page-master">
+  <div class="card">
+    <h2>⚙️ Pengaturan Master</h2>
+    <h3>🎨 Tema Warna</h3>
+    <div class="theme-grid">
+      <button class="theme-btn" data-theme="orange-green" style="background:linear-gradient(135deg,#ff8a3d,#4caf50);color:#fff">Oranye-Hijau</button>
+      <button class="theme-btn" data-theme="green-white" style="background:linear-gradient(135deg,#4caf50,#fff)">Hijau-Putih</button>
+      <button class="theme-btn" data-theme="orange-white" style="background:linear-gradient(135deg,#ff8a3d,#fff)">Oranye-Putih</button>
+    </div>
+    <h3>🧩 Urutan Menu Navigasi</h3>
+    <p class="hint">Geser (drag) untuk mengatur ulang. Data tetap aman.</p>
+    <ul id="menu-order" class="menu-order">
+      <li draggable="true" data-key="beranda">☰ 🏠 Beranda</li>
+      <li draggable="true" data-key="input">☰ ➕ Isi Laporan</li>
+      <li draggable="true" data-key="admin">☰ 📊 Admin</li>
+      <li draggable="true" data-key="master">☰ ⚙️ Master</li>
+    </ul>
+    <h3>👥 Master Crew</h3>
+    <textarea id="crew-list" rows="5" placeholder="Satu nama per baris"></textarea>
+    <button class="btn btn-primary" id="btn-save-crew" style="margin-top:8px">💾 Simpan Crew</button>
+    <h3>🚑 Master Armada</h3>
+    <textarea id="armada-list" rows="4" placeholder="Satu armada per baris"></textarea>
+    <button class="btn btn-primary" id="btn-save-armada" style="margin-top:8px">💾 Simpan Armada</button>
+    <h3>🧹 Bersihkan Data Lama</h3>
+    <p class="hint">Hapus laporan lebih dari 6 bulan agar penyimpanan tidak penuh.</p>
+    <button class="btn btn-danger" id="btn-clean">🗑️ Hapus Manual Sekarang</button>
+  </div>
+</div>
+
+<!-- ============ HALAMAN DETAIL ============ -->
+<div class="page" id="page-detail">
+  <div class="card">
+    <button class="btn btn-ghost" id="btn-back" style="margin-bottom:16px">← Kembali</button>
+    <div id="detail-content"></div>
+  </div>
+</div>
+
+</main>
+
+<script>
+/* ============================================================
+   KONFIGURASI
+============================================================ */
+const CREW_LIST = ['Rehan','Andi','Bagus','Dedi','Eko','Fajar'];
+const ARMADA_LIST = ['R1','R2','R3'];
+const KEPERLUAN_LIST = ['Jemput HD','Antar HD','Rujukan RS','Kontrol','Lainnya'];
+const HARI = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+const STORAGE_KEY = 'ambulanmu_laporan_v1';
+const STORAGE_CREW = 'ambulanmu_crew';
+const STORAGE_ARM = 'ambulanmu_armada';
+const STORAGE_THEME = 'ambulanmu_theme';
+const STORAGE_MENU = 'ambulanmu_menu_order';
+
+/* ============================================================
+   DATA LAYER (localStorage)
+============================================================ */
+function seedDemo(){
+  const today = new Date();
+  const d = n => { const x = new Date(today); x.setDate(x.getDate()-n); return x.toISOString().slice(0,10); };
+  const h = n => HARI[new Date(d(n)).getDay()];
+  return [
+    {id:'demo1', hari:h(0), tanggal:d(0), waktu:'18:00', keperluan:'Jemput HD',
+     nama:'Mujiman', alamat:'Gamping Tengah', titik_jemput:'RS PKU KOTA', titik_tujuan:'Gamping Tengah',
+     armada:'R1', crew:'Rehan', kas_masuk:50000, kas_keluar:0, ket_kas_keluar:'',
+     jarak_km:12.5, note:'', foto_urls:[], created_at:new Date().toISOString()},
+    {id:'demo2', hari:h(0), tanggal:d(0), waktu:'16:30', keperluan:'Antar HD',
+     nama:'Siti Aminah', alamat:'Godean', titik_jemput:'Godean', titik_tujuan:'RSUD Sleman',
+     armada:'R2', crew:'Andi', kas_masuk:75000, kas_keluar:15000, ket_kas_keluar:'Bensin',
+     jarak_km:8.2, note:'Pasien stabil', foto_urls:[], created_at:new Date().toISOString()},
+    {id:'demo3', hari:h(1), tanggal:d(1), waktu:'09:00', keperluan:'Rujukan RS',
+     nama:'Ahmad', alamat:'Mlati', titik_jemput:'Mlati', titik_tujuan:'RS Sardjito',
+     armada:'R1', crew:'Bagus', kas_masuk:100000, kas_keluar:25000, ket_kas_keluar:'Tol + parkir',
+     jarak_km:15.0, note:'', foto_urls:[], created_at:new Date(Date.now()-86400000).toISOString()}
+  ];
+}
+function loadLocal(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(!raw){ const s = seedDemo(); try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }catch(e){} return s; }
+  try { return JSON.parse(raw); } catch { return []; }
+}
+function saveLocal(arr){
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  } catch(e){
+    toast('⚠️ Storage browser penuh! Buka menu Master → Hapus data lama.', false);
+    throw e;
+  }
+}
+
+function listLaporan(){ return loadLocal().sort((a,b)=> (b.created_at||'').localeCompare(a.created_at||'')); }
+function getLaporan(id){ return loadLocal().find(x=>x.id===id); }
+function insertLaporan(p){
+  const arr = loadLocal();
+  p.id = 'local-' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
+  p.created_at = new Date().toISOString();
+  arr.unshift(p); saveLocal(arr); return p;
+}
+function updateLaporan(id, patch){
+  const arr = loadLocal();
+  const i = arr.findIndex(x=>x.id===id);
+  if(i>=0){ arr[i] = {...arr[i], ...patch}; saveLocal(arr); }
+}
+
+/* ============================================================
+   UTIL
+============================================================ */
+function fmtRp(n){ return (+n>0) ? 'Rp ' + Number(n).toLocaleString('id-ID') : '-'; }
+function toast(msg, ok){
+  if(ok===undefined) ok = true;
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.style.background = ok ? '#2e7d32' : '#c62828';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 2800);
+}
+function getCrewList(){
+  const raw = localStorage.getItem(STORAGE_CREW);
+  return raw ? raw.split('\n').map(x=>x.trim()).filter(Boolean) : CREW_LIST;
+}
+function getArmadaList(){
+  const raw = localStorage.getItem(STORAGE_ARM);
+  return raw ? raw.split('\n').map(x=>x.trim()).filter(Boolean) : ARMADA_LIST;
+}
+
+/* ============================================================
+   ROUTER
+============================================================ */
+function navigate(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const el = document.getElementById('page-'+page);
+  if(el) el.classList.add('active');
+  document.querySelectorAll('#nav a').forEach(a=>{
+    a.classList.toggle('active', a.dataset.page===page);
+  });
+  window.scrollTo({top:0, behavior:'smooth'});
+  if(page==='beranda') renderBeranda();
+  if(page==='admin') renderAdmin();
+  if(page==='master') renderMaster();
+  if(page==='input') renderInput();
+}
+
+document.querySelectorAll('#nav a').forEach(a=>{
+  a.addEventListener('click', e=>{
+    e.preventDefault();
+    navigate(a.dataset.page);
+    history.replaceState(null,'','#'+a.dataset.page);
+  });
+});
+
+/* ============================================================
+   BERANDA
+============================================================ */
+function renderBeranda(){
+  const data = listLaporan();
+  const today = new Date().toISOString().slice(0,10);
+  const td = data.filter(x=>x.tanggal===today);
+  const km = td.reduce((s,x)=>s+(+x.jarak_km||0),0);
+  const masuk = td.reduce((s,x)=>s+(+x.kas_masuk||0),0);
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="num">${td.length}</div><div class="lbl">Laporan Hari Ini</div></div>
+    <div class="stat green"><div class="num">${km.toFixed(1)} KM</div><div class="lbl">Jarak Hari Ini</div></div>
+    <div class="stat"><div class="num">${fmtRp(masuk)}</div><div class="lbl">Kas Masuk Hari Ini</div></div>
+    <div class="stat green"><div class="num">${data.length}</div><div class="lbl">Total Semua</div></div>
+  `;
+  const list = document.getElementById('laporan-list');
+  if(!data.length){ list.innerHTML = '<p class="loading">Belum ada laporan.</p>'; return; }
+  list.innerHTML = data.slice(0,20).map(d=>`
+    <div class="laporan-item" onclick="openDetail('${d.id}')">
+      <div class="head">
+        <span>${d.nama} — ${d.keperluan}</span>
+        <span class="armada-badge">${d.armada}</span>
+      </div>
+      <div class="meta">📅 ${d.tanggal} ${d.waktu} • 👤 Crew: <span class="crew-badge">${d.crew}</span></div>
+      <div class="meta">📍 ${d.titik_jemput} → ${d.titik_tujuan}</div>
+      <div class="meta">💰 Masuk: ${fmtRp(d.kas_masuk)} • 🛣️ ${d.jarak_km||0} KM</div>
+    </div>
+  `).join('');
+}
+
+/* ============================================================
+   INPUT FORM
+============================================================ */
+function renderInput(){
+  const form = document.getElementById('form-laporan');
+  if(!form.crew.options.length){
+    form.crew.innerHTML = '<option value="">-- Pilih --</option>' +
+      getCrewList().map(c=>`<option>${c}</option>`).join('');
+    form.armada.innerHTML = getArmadaList().map(a=>`<option>${a}</option>`).join('');
+    form.keperluan.innerHTML = '<option value="">-- Pilih --</option>' +
+      KEPERLUAN_LIST.map(k=>`<option>${k}</option>`).join('');
+  }
+  if(!form.tanggal.value){
+    form.tanggal.value = new Date().toISOString().slice(0,10);
+    form.hari.value = HARI[new Date().getDay()];
+  }
+}
+
+document.getElementById('form-laporan').tanggal.addEventListener('change', e=>{
+  const d = new Date(e.target.value);
+  document.getElementById('form-laporan').hari.value = HARI[d.getDay()] || '';
+});
+
+document.querySelector('[name=foto]').addEventListener('change', e=>{
+  const prev = document.getElementById('foto-preview'); prev.innerHTML='';
+  [...e.target.files].forEach(f=>{
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(f); prev.appendChild(img);
+  });
+});
+
+document.getElementById('btn-duplikat').addEventListener('click', ()=>{
+  const data = listLaporan();
+  if(!data.length){ toast('Belum ada laporan untuk diduplikat.', false); return; }
+  const last = data[0];
+  const form = document.getElementById('form-laporan');
+  ['keperluan','nama','alamat','titik_jemput','titik_tujuan','armada','crew','kas_masuk','kas_keluar','ket_kas_keluar','jarak_km','note']
+    .forEach(k=>{ if(form[k]) form[k].value = last[k] ?? ''; });
+  toast('✅ Terisi dari laporan terakhir. Ubah tanggal & nama pasien.');
+});
+
+document.querySelectorAll('.btn-map').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    const name = b.dataset.maps;
+    const input = document.querySelector(`[name=${name}]`);
+    const q = prompt('Ketik lokasi / nama RS (akan dibuka di Google Maps):', input.value || '');
+    if(!q) return;
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`,'_blank');
+    input.value = q;
+  });
+});
+
+document.getElementById('form-laporan').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const form = e.target;
+  const payload = {};
+  new FormData(form).forEach((v,k)=>{ if(k!=='foto') payload[k] = v; });
+  payload.kas_masuk = +payload.kas_masuk || 0;
+  payload.kas_keluar = +payload.kas_keluar || 0;
+  payload.jarak_km = +payload.jarak_km || 0;
+
+  const fotoFiles = form.foto.files;
+  const urls = [];
+  for(const f of fotoFiles){
+    if(f.size > 500*1024){ toast(`Foto ${f.name} >500KB, dilewati.`, false); continue; }
+    const b64 = await new Promise(res=>{
+      const r = new FileReader(); r.onload = ()=>res(r.result); r.readAsDataURL(f);
+    });
+    urls.push(b64);
+  }
+  payload.foto_urls = urls;
+
+  try{
+    insertLaporan(payload);
+    toast('✅ Laporan tersimpan!');
+    form.reset();
+    setTimeout(()=>{
+      form.tanggal.value = new Date().toISOString().slice(0,10);
+      form.hari.value = HARI[new Date().getDay()];
+    }, 0);
+    document.getElementById('foto-preview').innerHTML = '';
+    navigate('beranda');
+  }catch(err){
+    // toast sudah dipanggil di saveLocal
+  }
+});
+
+/* ============================================================
+   DETAIL
+============================================================ */
+function openDetail(id){
+  const r = getLaporan(id);
+  if(!r){ toast('Laporan tidak ditemukan.', false); return; }
+  const el = document.getElementById('detail-content');
+  el.innerHTML = `
+    <h2 style="color:#2e7d32">📄 ${r.nama} — ${r.keperluan}</h2>
+    <div class="detail-grid">
+      <div><b>Hari</b><br>${r.hari||'-'}</div>
+      <div><b>Tanggal</b><br>${r.tanggal||'-'}</div>
+      <div><b>Waktu</b><br>${r.waktu||'-'} WIB</div>
+      <div><b>Armada</b><br>${r.armada||'-'}</div>
+      <div><b>Crew</b><br>${r.crew||'-'}</div>
+      <div><b>Jarak</b><br>${r.jarak_km||0} KM</div>
+      <div><b>Alamat</b><br>${r.alamat||'-'}</div>
+      <div><b>Kas Masuk</b><br>${fmtRp(r.kas_masuk)}</div>
+      <div><b>Kas Keluar</b><br>${fmtRp(r.kas_keluar)}</div>
+      <div><b>Ket Kas</b><br>${r.ket_kas_keluar||'-'}</div>
+    </div>
+    <h3>🗺️ Rute Layanan</h3>
+    <div class="route">
+      <div class="route-point pick">🔵 Jemput: <b>${r.titik_jemput||'-'}</b></div>
+      <div class="route-line">↓</div>
+      <div class="route-point drop">🔴 Tujuan: <b>${r.titik_tujuan||'-'}</b></div>
+    </div>
+    <a class="btn btn-map" target="_blank" style="margin-top:8px"
+      href="https://www.google.com/maps/dir/?
