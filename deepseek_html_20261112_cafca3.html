@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laporan Layanan AmbulanMu Godean</title>
+  <!-- Appwrite SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/appwrite@17.0.0"></script>
+  <!-- SheetJS untuk export Excel -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <!-- Leaflet untuk peta sederhana -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, sans-serif; }
+    body { margin: 0; padding: 20px; background: #fffaf5; color: #333; }
+    .container { max-width: 1100px; margin: auto; }
+    h1 { color: #e67e22; display: flex; align-items: center; gap: 10px; }
+    h1::before { content: "🚑"; font-size: 1.8rem; }
+    .card { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); border: 1px solid #e8f5e9; }
+    .card h2 { color: #2e7d32; margin-top: 0; font-size: 1.2rem; border-bottom: 2px solid #a5d6a7; padding-bottom: 8px; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+    .form-grid label { display: flex; flex-direction: column; font-size: 0.85rem; font-weight: 600; color: #555; gap: 4px; }
+    .form-grid input, .form-grid select, .form-grid textarea {
+      padding: 10px 12px; border: 1.5px solid #c8e6c9; border-radius: 10px; font-size: 0.95rem;
+      background: #fafffa; transition: 0.2s;
+    }
+    .form-grid input:focus, .form-grid select:focus, .form-grid textarea:focus {
+      border-color: #43a047; outline: none; box-shadow: 0 0 0 3px rgba(67,160,71,0.15);
+    }
+    .full-width { grid-column: 1 / -1; }
+    button { padding: 10px 20px; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .btn-primary { background: #e67e22; color: #fff; }
+    .btn-primary:hover { background: #d35400; }
+    .btn-secondary { background: #43a047; color: #fff; }
+    .btn-secondary:hover { background: #2e7d32; }
+    .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+    .btn-wa { background: #25D366; color: #fff; }
+    .btn-excel { background: #1d6f42; color: #fff; }
+    .report-item { border: 1px solid #e0e0e0; border-radius: 12px; padding: 14px; margin-bottom: 10px; background: #f9fff9; }
+    .report-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .report-header strong { color: #2e7d32; }
+    .report-body { font-size: 0.9rem; color: #444; margin-top: 8px; line-height: 1.6; }
+    .tag { display: inline-block; background: #e8f5e9; color: #2e7d32; padding: 2px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin-right: 6px; }
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    #map-detail { height: 200px; border-radius: 12px; margin-top: 10px; display: none; }
+    .status-msg { padding: 10px; border-radius: 8px; margin: 10px 0; display: none; }
+    .status-success { background: #e8f5e9; color: #2e7d32; display: block; }
+    .status-error { background: #ffebee; color: #c62828; display: block; }
+    .motivation { text-align: center; font-style: italic; color: #7cb342; margin-top: 30px; padding: 16px; border-top: 2px dashed #c8e6c9; }
+    .nav-links { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+    .nav-links a { text-decoration: none; background: #fff; padding: 8px 16px; border-radius: 20px; color: #e67e22; font-weight: 600; border: 1.5px solid #f0c8a0; }
+    .nav-links a:hover { background: #fdf0e6; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Laporan Layanan AmbulanMu Godean</h1>
+  <div class="nav-links">
+    <a href="#form-section">📝 Isi Laporan</a>
+    <a href="#reports-section">📋 Rekap Hari Ini</a>
+    <a href="#" id="btn-export-all">📥 Export Excel</a>
+  </div>
+
+  <!-- ========== FORM PENGISIAN ========== -->
+  <div class="card" id="form-section">
+    <h2>Isi Laporan Layanan</h2>
+    <div id="form-status" class="status-msg"></div>
+    <form id="report-form">
+      <div class="form-grid">
+        <label>Hari <input type="text" name="hari" id="inp-hari" required></label>
+        <label>Tanggal <input type="date" name="tanggal" id="inp-tanggal" required></label>
+        <label>Waktu <input type="time" name="waktu" id="inp-waktu" required></label>
+        <label>Keperluan <input type="text" name="keperluan" placeholder="cth: Jemput HD" required></label>
+        <label>Nama Pasien <input type="text" name="nama" required></label>
+        <label>Alamat <input type="text" name="alamat" required></label>
+        <label>Titik Jemput <input type="text" name="titik_jemput" placeholder="cth: RS PKU KOTA" required></label>
+        <label>Titik Tujuan <input type="text" name="titik_tujuan" placeholder="cth: Gamping Tengah" required></label>
+        <label>Armada <input type="text" name="armada" placeholder="cth: R1" required></label>
+        <label>Crew
+          <select name="crew" required>
+            <option value="">-- Pilih Crew --</option>
+            <option>Rehan</option><option>Andi</option><option>Budi</option><option>Dedi</option>
+            <!-- Tambahkan nama crew lain di sini -->
+          </select>
+        </label>
+        <label>Kas Masuk (Rp) <input type="number" name="kas_masuk" placeholder="50000" required></label>
+        <label>Kas Keluar (Rp) <input type="number" name="kas_keluar" placeholder="0"></label>
+        <label>Keterangan Kas Keluar <input type="text" name="note" placeholder="cth: beli bensin"></label>
+        <label>Jarak KM <input type="number" name="jarak_km" placeholder="cth: 12.5" step="0.1"></label>
+        <label class="full-width">Dokumentasi Foto <input type="file" name="foto" accept="image/*"></label>
+      </div>
+      <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+        <button type="submit" class="btn-primary">✅ Kirim Laporan</button>
+        <button type="button" class="btn-secondary" id="btn-duplicate">📋 Duplikat Laporan Kemarin</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ========== DAFTAR REKAP ========== -->
+  <div class="card" id="reports-section">
+    <h2>Rekap Laporan (Real-time)</h2>
+    <div style="margin-bottom:12px;">
+      <button class="btn-excel btn-sm" id="btn-export-today">📥 Export Hari Ini (.xlsx)</button>
+    </div>
+    <div id="reports-list">Memuat data...</div>
+  </div>
+
+  <div class="motivation">
+    <em>Tetap semangat melayani umat,</em><br>
+    <em>Memberi untuk Negeri</strong></em>
+  </div>
+</div>
+
+<!-- Peta detail (muncul saat klik "Lihat Peta") -->
+<div id="map-detail"></div>
+
+<script>
+// ==================== KONFIGURASI ====================
+const APPWRITE_ENDPOINT = 'https://cloud.appwrite.io/v1'; // Ganti jika self-hosted
+const PROJECT_ID = 'GANTI_PROJECT_ID_ANDA';
+const DB_ID = 'GANTI_DATABASE_ID';
+const COLLECTION_ID = 'reports';
+const BUCKET_ID = 'photos';
+
+// ==================== INISIALISASI ====================
+const { Client, Databases, Storage, ID, Query } = Appwrite;
+const client = new Client().setEndpoint(APPWRITE_ENDPOINT).setProject(PROJECT_ID);
+const databases = new Databases(client);
+const storage = new Storage(client);
+
+let allReports = [];
+let mapInstance = null;
+
+// ==================== FORM ====================
+const form = document.getElementById('report-form');
+const statusDiv = document.getElementById('form-status');
+
+// Isi otomatis hari & tanggal hari ini
+(function setToday() {
+  const now = new Date();
+  const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  document.getElementById('inp-hari').value = days[now.getDay()];
+  document.getElementById('inp-tanggal').value = now.toISOString().split('T')[0];
+  document.getElementById('inp-waktu').value = now.toTimeString().slice(0,5);
+})();
+
+// Format Rupiah
+function formatRupiah(num) {
+  const n = parseFloat(num) || 0;
+  return 'Rp ' + n.toLocaleString('id-ID');
+}
+
+// Submit form
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  statusDiv.className = 'status-msg';
+  const fd = new FormData(form);
+  const submitBtn = form.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Mengirim...';
+
+  try {
+    let fotoId = '';
+    const fileInput = fd.get('foto');
+    if (fileInput && fileInput.size > 0) {
+      const uploaded = await storage.createFile(BUCKET_ID, ID.unique(), fileInput);
+      fotoId = uploaded.$id;
+    }
+
+    await databases.createDocument(DB_ID, COLLECTION_ID, ID.unique(), {
+      hari: fd.get('hari'),
+      tanggal: fd.get('tanggal'),
+      waktu: fd.get('waktu'),
+      keperluan: fd.get('keperluan'),
+      nama: fd.get('nama'),
+      alamat: fd.get('alamat'),
+      titik_jemput: fd.get('titik_jemput'),
+      titik_tujuan: fd.get('titik_tujuan'),
+      armada: fd.get('armada'),
+      crew: fd.get('crew'),
+      kas_masuk: String(fd.get('kas_masuk')),
+      kas_keluar: String(fd.get('kas_keluar') || '0'),
+      note: fd.get('note') || '',
+      jarak_km: String(fd.get('jarak_km') || '0'),
+      foto_id: fotoId,
+      created_at: new Date().toISOString()
+    });
+
+    statusDiv.className = 'status-msg status-success';
+    statusDiv.textContent = '✅ Laporan berhasil dikirim!';
+    form.reset();
+    setToday();
+    loadReports();
+  } catch (err) {
+    console.error(err);
+    statusDiv.className = 'status-msg status-error';
+    statusDiv.textContent = '❌ Gagal: ' + err.message;
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = '✅ Kirim Laporan';
+  }
+});
+
+// Duplikat laporan terakhir
+document.getElementById('btn-duplicate').addEventListener('click', async () => {
+  try {
+    const res = await databases.listDocuments(DB_ID, COLLECTION_ID, [
+      Query.orderDesc('created_at'),
+      Query.limit(1)
+    ]);
+    if (res.documents.length === 0) {
+      alert('Belum ada laporan sebelumnya untuk diduplikat.');
+      return;
+    }
+    const last = res.documents[0];
+    const form = document.getElementById('report-form');
+    form.keperluan.value = last.keperluan || '';
+    form.nama.value = last.nama || '';
+    form.alamat.value = last.alamat || '';
+    form.titik_jemput.value = last.titik_jemput || '';
+    form.titik_tujuan.value = last.titik_tujuan || '';
+    form.armada.value = last.armada || '';
+    form.crew.value = last.crew || '';
+    form.kas_masuk.value = last.kas_masuk || '';
+    form.jarak_km.value = last.jarak_km || '';
+    alert('Data laporan terakhir telah diisi. Silakan periksa dan kirim.');
+  } catch (err) {
+    alert('Gagal mengambil laporan terakhir: ' + err.message);
+  }
+});
+
+// ==================== LOAD & RENDER ====================
+async function loadReports() {
+  try {
+    const res = await databases.listDocuments(DB_ID, COLLECTION_ID, [
+      Query.orderDesc('created_at'),
+      Query.limit(100)
+    ]);
+    allReports = res.documents;
+    renderReports(allReports);
+  } catch (err) {
+    document.getElementById('reports-list').innerHTML = 'Error memuat: ' + err.message;
+  }
+}
+
+function renderReports(docs) {
+  const container = document.getElementById('reports-list');
+  if (docs.length === 0) {
+    container.innerHTML = '<p>Belum ada laporan.</p>';
+    return;
+  }
+  container.innerHTML = docs.map(doc => {
+    const kasMasuk = formatRupiah(doc.kas_masuk);
+    const kasKeluar = formatRupiah(doc.kas_keluar);
+    const fotoUrl = doc.foto_id ? storage.getFileView(BUCKET_ID, doc.foto_id) : null;
+    const waText = buildWhatsAppText(doc);
+    return `
+      <div class="report-item" data-id="${doc.$id}">
+        <div class="report-header">
+          <strong>${doc.tanggal} ${doc.waktu} — ${doc.keperluan}</strong>
+          <span class="tag">${doc.crew}</span>
+        </div>
+        <div class="report-body">
+          <div>👤 ${doc.nama} | 📍 ${doc.alamat}</div>
+          <div>🚑 Jemput: ${doc.titik_jemput} → Tujuan: ${doc.titik_tujuan}</div>
+          <div>💰 Masuk: ${kasMasuk} | Keluar: ${kasKeluar} ${doc.note ? '('+doc.note+')' : ''}</div>
+          <div>🛣️ Jarak: ${doc.jarak_km || '0'} KM</div>
+          ${fotoUrl ? `<div style="margin-top:6px;"><img src="${fotoUrl}" style="max-height:100px;border-radius:8px;" alt="foto"></div>` : ''}
+        </div>
+        <div class="actions">
+          <button class="btn-wa btn-sm" onclick="copyWA('${doc.$id}')">📱 Salin WhatsApp</button>
+          <button class="btn-secondary btn-sm" onclick="showMap('${doc.titik_jemput}','${doc.titik_tujuan}')">🗺️ Lihat Peta</button>
+          <button class="btn-primary btn-sm" onclick="editReport('${doc.$id}')">✏️ Edit</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ==================== WHATSAPP COPY ====================
+function buildWhatsAppText(doc) {
+  const kasMasuk = doc.kas_masuk ? formatRupiah(doc.kas_masuk) : '-';
+  const kasKeluar = doc.kas_keluar && doc.kas_keluar !== '0' ? formatRupiah(doc.kas_keluar) + (doc.note ? ' ('+doc.note+')' : '') : '-';
+  return `*Laporan Layanan AmbulanMu Godean*
+
+*Hari* : *${doc.hari}*
+*Tanggal* : *${doc.tanggal}*
+*Waktu* : *${doc.waktu}wib*
+*Keperluan* : *${doc.keperluan}*
+*Nama* : *${doc.nama}*
+*Alamat* : *${doc.alamat}*
+*Titik jemput* : *${doc.titik_jemput}*
+*Titik Tujuan* : *${doc.titik_tujuan}*
+*Armada* : *${doc.armada}*
+*Crew* : *${doc.crew}*
+*Kas Masuk* : *${kasMasuk}*
+*Kas keluar* : *${kasKeluar}*
+*Jarak* : *${doc.jarak_km || 0} KM*
+*Note* : *${doc.note || ''}*
+
+*Tetap semangat melayani umat*,
+*Memberi untuk Negeri*`;
+}
+
+async function copyWA(docId) {
+  const doc = allReports.find(d => d.$id === docId);
+  if (!doc) return;
+  const text = buildWhatsAppText(doc);
+  try {
+    await navigator.clipboard.writeText(text);
+    alert('Teks laporan sudah disalin! Tinggal paste di grup WhatsApp.');
+  } catch (err) {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    alert('Teks disalin (fallback).');
+  }
+}
+
+// ==================== PETA SEDERHANA ====================
+function showMap(jemput, tujuan) {
+  const mapDiv = document.getElementById('map-detail');
+  mapDiv.style.display = 'block';
+  if (mapInstance) { mapInstance.remove(); mapInstance = null; }
+  mapDiv.scrollIntoView({ behavior: 'smooth' });
+
+  mapInstance = L.map('map-detail').setView([-7.8, 110.36], 12); // Koordinat Yogyakarta
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+  }).addTo(mapInstance);
+  L.marker([-7.78, 110.37]).addTo(mapInstance).bindPopup('Jemput: ' + jemput);
+  L.marker([-7.82, 110.35]).addTo(mapInstance).bindPopup('Tujuan: ' + tujuan);
+  // Catatan: untuk rute garis nyata perlu geocoding koordinat. Ini hanya demo penanda.
+}
+
+// ==================== EXPORT EXCEL ====================
+function exportExcel(docs, filename) {
+  const rows = docs.map(d => ({
+    Hari: d.hari, Tanggal: d.tanggal, Waktu: d.waktu, Keperluan: d.keperluan,
+    Nama: d.nama, Alamat: d.alamat, 'Titik Jemput': d.titik_jemput,
+    'Titik Tujuan': d.titik_tujuan, Armada: d.armada, Crew: d.crew,
+    'Kas Masuk': d.kas_masuk, 'Kas Keluar': d.kas_keluar, Note: d.note,
+    'Jarak KM': d.jarak_km, 'Foto ID': d.foto_id || ''
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Laporan');
+  XLSX.writeFile(wb, filename);
+}
+
+document.getElementById('btn-export-all').addEventListener('click', (e) => {
+  e.preventDefault();
+  if (allReports.length === 0) { alert('Belum ada data.'); return; }
+  exportExcel(allReports, 'laporan_ambulans_semua.xlsx');
+});
+
+document.getElementById('btn-export-today').addEventListener('click', () => {
+  const today = new Date().toISOString().split('T')[0];
+  const todayDocs = allReports.filter(d => d.tanggal === today);
+  if (todayDocs.length === 0) { alert('Belum ada laporan hari ini.'); return; }
+  exportExcel(todayDocs, 'laporan_hari_ini.xlsx');
+});
+
+// ==================== EDIT (5 MENIT) ====================
+async function editReport(docId) {
+  const doc = allReports.find(d => d.$id === docId);
+  if (!doc) return;
+  const created = new Date(doc.created_at || doc.$createdAt);
+  const now = new Date();
+  const diffMin = (now - created) / 60000;
+  if (diffMin > 5) {
+    alert('Laporan sudah lebih dari 5 menit, tidak bisa diedit.');
+    return;
+  }
+  const field = prompt('Field apa yang ingin diedit? (keperluan/nama/alamat/titik_jemput/titik_tujuan/armada/crew/kas_masuk/kas_keluar/note/jarak_km)');
+  if (!field) return;
+  const newVal = prompt('Nilai baru untuk ' + field + ':');
+  if (newVal === null) return;
+  try {
+    await databases.updateDocument(DB_ID, COLLECTION_ID, docId, { [field]: newVal });
+    alert('Berhasil diedit!');
+    loadReports();
+  } catch (err) {
+    alert('Gagal edit: ' + err.message);
+  }
+}
+
+// ==================== REAL-TIME ====================
+// Inisialisasi Realtime (Appwrite 17.0.0)
+try {
+  const realtime = new Appwrite.Realtime(client);
+  realtime.subscribe(`databases.${DB_ID}.collections.${COLLECTION_ID}.documents`, (res) => {
+    loadReports();
+  });
+} catch (e) {
+  console.warn('Realtime tidak aktif:', e.message);
+}
+
+// ==================== MULAI ====================
+loadReports();
+</script>
+</body>
+</html>
